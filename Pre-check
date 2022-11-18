@@ -1,0 +1,39 @@
+from bs4 import BeautifulSoup
+import requests
+import re
+
+def pre_requisitar(link):
+    html_text_pre = requests.get(link).text
+    soup_pre = BeautifulSoup(html_text_pre, 'lxml')
+    lista_pre = soup_pre.find('ul', class_="prerequisitos")
+    if lista_pre:
+        combinacao = re.compile('até 2022:,(.*)')
+        if len(combinacao.findall(lista_pre.text.strip().replace("  ", r",").replace("/ ", r",").replace("*", r" "))) > 0:
+            pre_requisitos = str(combinacao.findall(lista_pre.text.strip().replace("*", r" ").replace("  ", r","))[0]).split("/ ")
+            pre_requisitos = [i.split(',') for i in pre_requisitos]
+            print(f"""          {pre_requisitos}""")
+        else:
+            print(f"""          [Sem pré-requisitos]""")
+
+    else:
+        print(f"""          [Sem pré-requisitos]""")
+
+
+
+html_text = requests.get('https://www.dac.unicamp.br/portal/caderno-de-horarios/2022/2/S/G').text
+soup = BeautifulSoup(html_text, 'lxml')
+faculdades = soup.find_all('div', class_ = 'col-sm-4 item')
+for faculdade in faculdades:
+    sigla_faculdade = faculdade.find('span', class_ = 'label label-default').text.strip()
+    nome_faculdade = faculdade.find("span", text=re.compile(sigla_faculdade)).next_sibling.text.strip()
+    link_materias = faculdade.find('a', href=True)
+    site_materias = requests.get(link_materias['href']).text
+    sopa = BeautifulSoup(site_materias, 'lxml')
+    materias = sopa.find_all('div', class_='col-sm-4 disciplina')
+    print(f'''[{sigla_faculdade}] {nome_faculdade}\n''')
+    for materia in materias:
+        sigla_materia = materia.find('span', class_='label label-default').text
+        nome_materia = materia.find("span", text=re.compile(sigla_materia)).next_sibling.text.strip()
+        link_mat = materia.find('a', href=True)
+        print(f'''      [{sigla_materia}] {nome_materia}''')
+        pre_requisitar(link_mat['href'])
